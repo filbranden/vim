@@ -422,6 +422,10 @@ do_mouse(
 		insert_reg(regname, TRUE);
 	    else
 	    {
+#ifdef FEAT_PROVIDER
+		if (regname == 0 && eval_has_provider("clipboard"))
+		    regname = '*';
+#endif
 #ifdef FEAT_CLIPBOARD
 		if (clip_star.available && regname == 0)
 		    regname = '*';
@@ -822,6 +826,10 @@ do_mouse(
     // Middle mouse click: Put text before cursor.
     if (which_button == MOUSE_MIDDLE)
     {
+#ifdef FEAT_PROVIDER
+	if (regname == 0 && eval_has_provider("clipboard"))
+	    regname = '*';
+#endif
 #ifdef FEAT_CLIPBOARD
 	if (clip_star.available && regname == 0)
 	    regname = '*';

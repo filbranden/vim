@@ -182,6 +182,11 @@ valid_yank_reg(
 #ifdef FEAT_CLIPBOARD
 	    || regname == '*'
 	    || regname == '+'
+#else
+#ifdef FEAT_PROVIDER
+	    || ((regname == '*' || regname == '+')
+		&& eval_has_provider("clipboard"))
+#endif
 #endif
 #ifdef FEAT_DND
 	    || (!writing && regname == '~')
@@ -226,6 +231,14 @@ get_yank_register(int regname, int writing)
     }
     else if (regname == '-')
 	i = DELETION_REGISTER;
+#ifdef FEAT_PROVIDER
+    else if ((regname == '*' || regname == '+')
+	    && eval_has_provider("clipboard"))
+    {
+	i = regname == '*' ? STAR_REGISTER : PLUS_REGISTER;
+	ret = TRUE;
+    }
+#endif
 #ifdef FEAT_CLIPBOARD
     // When selection is not available, use register 0 instead of '*'
     else if (clip_star.available && regname == '*')
@@ -1124,6 +1137,9 @@ op_yank(oparg_T *oap, int deleting, int mess)
     char_u		*p;
     char_u		*pnew;
     struct block_def	bd;
+#if defined(FEAT_CLIPBOARD) || defined(FEAT_PROVIDER)
+    int			keep_regname = FALSE;
+#endif
 #if defined(FEAT_CLIPBOARD) && defined(FEAT_X11)
     int			did_star = FALSE;
 #endif
@@ -1137,11 +1153,21 @@ op_yank(oparg_T *oap, int deleting, int mess)
     if (oap->regname == '_')	    // black hole: nothing to do
 	return OK;
 
+#if defined(FEAT_PROVIDER) || defined(FEAT_CLIPBOARD)
+    if (oap->regname == '*' || oap->regname == '+') {
+#ifdef FEAT_PROVIDER
+	if (eval_has_provider("clipboard"))
+	    keep_regname = TRUE;
+#endif
 #ifdef FEAT_CLIPBOARD
-    if (!clip_star.available && oap->regname == '*')
-	oap->regname = 0;
-    else if (!clip_plus.available && oap->regname == '+')
-	oap->regname = 0;
+	if (!keep_regname && clip_star.available && oap->regname == '*')
+	    keep_regname = TRUE;
+	else if (!keep_regname && clip_plus.available && oap->regname == '+')
+	    keep_regname = TRUE;
+#endif
+	if (!keep_regname)
+	    oap->regname = 0;
+    }
 #endif
 
     if (!deleting)		    // op_delete() already set y_current
@@ -1372,6 +1398,8 @@ op_yank(oparg_T *oap, int deleting, int mess)
 	    curbuf->b_op_end.col = MAXCOL;
 	}
     }
+
+    // TODO: Implement clipboard provider access here.
 
 #ifdef FEAT_CLIPBOARD
     // If we were yanking to the '*' register, send result to clipboard.

@@ -6023,6 +6023,111 @@ last_set_msg(sctx_T script_ctx)
     }
 }
 
+# ifdef FEAT_PROVIDER
+/*
+ * Checks if provider for feature `name` is enabled.
+ */
+    int
+eval_has_provider(const char *name)
+{
+    char	buf[256];
+    typval_T	tv;
+    int		len;
+    int		ok;
+
+    if (STRCMP(name, "clipboard") != 0)
+    {
+	// Avoid autoload for non-provider has() features.
+	return FALSE;
+    }
+
+    // Get the g:loaded_xx_provider variable.
+    len = snprintf(buf, sizeof(buf), "g:loaded_%s_provider", name);
+    if (eval_variable(buf, len, &tv, NULL, FALSE, TRUE) == FAIL)
+    {
+	// Trigger autoload once.
+	snprintf(buf, sizeof(buf), "provider#%s#bogus", name);
+	script_autoload(buf, FALSE);
+
+	// Retry the (non-autoload-style) variable.
+	len = snprintf(buf, sizeof(buf), "g:loaded_%s_provider", name);
+	if (eval_variable(buf, len, &tv, NULL, FALSE, TRUE) == FAIL)
+	{
+	    // Show a hint if Call() is defined but g:loaded_xx_provider is missing.
+	    snprintf(buf, sizeof(buf), "provider#%s#Call", name);
+	    if (!!find_func((char_u *)buf, FALSE, NULL) && p_lpl)
+	    {
+		semsg("provider: %s: missing required variable g:loaded_%s_provider",
+			name, name);
+	    }
+	    return FALSE;
+	}
+    }
+
+    ok = (tv.v_type == VAR_NUMBER)
+	? 2 == tv.vval.v_number  // Value of 2 means "loaded and working".
+	: FALSE;
+
+    if (ok)
+    {
+	// Call() must be defined if provider claims to be working.
+	snprintf(buf, sizeof(buf), "provider#%s#Call", name);
+	if (!find_func((char_u *)buf, FALSE, NULL))
+	{
+	    semsg("provider: %s: g:loaded_%s_provider=2 but %s is not defined",
+		    name, name, buf);
+	    ok = FALSE;
+	}
+    }
+
+    return ok;
+}
+
+/*
+ * Calls `method` of `provider`, passing it `arguments`.
+ */
+    typval_T
+eval_call_provider(char *provider, char *method, list_T *arguments)
+{
+    char	func[256];
+    int		name_len;
+
+    if (!eval_has_provider(provider))
+    {
+	semsg("E319: No \"%s\" provider found.", provider);
+	return (typval_T){
+	    .v_type = VAR_NUMBER,
+	    .vval.v_number = (varnumber_T)0
+	};
+    }
+
+    name_len = snprintf(func, sizeof(func), "provider#%s#Call", provider);
+
+    funccal_entry_T funccal_entry;
+    save_funccal(&funccal_entry);
+
+    typval_T argvars[3] = {
+	{ .v_type = VAR_STRING, .vval.v_string = (char_u *)method },
+	{ .v_type = VAR_LIST, .vval.v_list = arguments },
+	{ .v_type = VAR_UNKNOWN }
+    };
+    typval_T rettv = { .v_type = VAR_UNKNOWN };
+    arguments->lv_refcount++;
+
+    funcexe_T funcexe;
+    CLEAR_FIELD(funcexe);
+    funcexe.firstline = curwin->w_cursor.lnum;
+    funcexe.lastline = curwin->w_cursor.lnum;
+    funcexe.evaluate = TRUE;
+    (void)call_func(func, name_len, &rettv, 2, argvars, &funcexe);
+
+    arguments->lv_refcount--;
+    restore_funccal();
+
+    return rettv;
+}
+# endif // FEAT_PROVIDER
+
 #endif // FEAT_EVAL
 
 /*

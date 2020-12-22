@@ -4984,6 +4984,13 @@ f_has(typval_T *argvars, typval_T *rettv)
 		0
 #endif
 		},
+	{"provider",
+#ifdef FEAT_PROVIDER
+		1
+#else
+		0
+#endif
+		},
 	{"reltime",
 #ifdef FEAT_RELTIME
 		1
@@ -5169,13 +5176,6 @@ f_has(typval_T *argvars, typval_T *rettv)
 		},
 	{"toolbar",
 #ifdef FEAT_TOOLBAR
-		1
-#else
-		0
-#endif
-		},
-	{"unnamedplus",
-#if defined(FEAT_CLIPBOARD) && defined(FEAT_X11)
 		1
 #else
 		0
@@ -5486,6 +5486,19 @@ f_has(typval_T *argvars, typval_T *rettv)
 	    x = TRUE;
 #ifdef FEAT_CLIPBOARD
 	    n = clip_star.available;
+#endif
+	}
+	else if (STRICMP(name, "unnamedplus") == 0)
+	{
+	    x = TRUE;
+#if defined(FEAT_CLIPBOARD) && defined(FEAT_X11)
+	    n = 1;
+#else
+#ifdef FEAT_PROVIDER
+	    n = eval_has_provider("clipboard");
+#else
+	    n = 0;
+#endif
 #endif
 	}
     }

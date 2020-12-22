@@ -1008,6 +1008,14 @@
 #endif
 
 /*
+ * +provider		Provider support. For now, clipboard provider only.
+ */
+
+#ifdef FEAT_EVAL
+# define FEAT_PROVIDER
+#endif
+
+/*
  * +dnd		Drag'n'drop support.  Always used for the GTK+ GUI.
  */
 #if defined(FEAT_CLIPBOARD) && defined(FEAT_GUI_GTK)

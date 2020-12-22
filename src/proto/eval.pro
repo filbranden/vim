@@ -73,5 +73,7 @@ int get_echo_attr(void);
 void ex_execute(exarg_T *eap);
 char_u *find_option_end(char_u **arg, int *opt_flags);
 void last_set_msg(sctx_T script_ctx);
+int eval_has_provider(const char *name);
+typval_T eval_call_provider(char *provider, char *method, list_T *arguments);
 char_u *do_string_sub(char_u *str, char_u *pat, char_u *sub, typval_T *expr, char_u *flags);
 /* vim: set ft=c : */

@@ -4194,9 +4194,9 @@ typedef enum {
 
 // Symbolic names for some registers.
 #define DELETION_REGISTER	36
-#ifdef FEAT_CLIPBOARD
+#if defined(FEAT_CLIPBOARD) || defined(FEAT_PROVIDER)
 # define STAR_REGISTER		37
-#  ifdef FEAT_X11
+#  if defined(FEAT_X11) || defined(FEAT_PROVIDER)
 #   define PLUS_REGISTER	38
 #  else
 #   define PLUS_REGISTER	STAR_REGISTER	    // there is only one

@@ -500,6 +500,11 @@ static char *(features[]) =
 #else
 	"-profile",
 #endif
+#ifdef FEAT_PROVIDER
+	"+provider",
+#else
+	"-provider",
+#endif
 #ifdef FEAT_PYTHON
 # ifdef DYNAMIC_PYTHON
 	"+python/dyn",
